@@ -1,0 +1,103 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "untitled.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "assets/images.tsx": {
+            "dynamicWrapping": true
+        },
+        "assets/lock.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1.7454
+        },
+        "assets/tileMapGame..tmj": {
+            "scale": 1.6498,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 1554.7339071402594,
+                "y": 297.0056976603225
+            }
+        },
+        "assets/tileMapGame..tmj#tileset": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1.2304
+        },
+        "assets/tileMapGame.tmj": {
+            "scale": 1.0145,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 1483.489403647117,
+                "y": 276.9837358304584
+            }
+        },
+        "assets/tileMapGame.tmj#tileset": {
+            "scaleInDock": 1
+        },
+        "nick_wilde_cage_fixed.tsx": {
+            "scaleInDock": 0.3714,
+            "scaleInEditor": 0.21
+        },
+        "tileMapGame.tmx": {
+            "expandedObjectLayers": [
+                10,
+                7,
+                6,
+                15
+            ],
+            "scale": 1.1265,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 1561.473590767865,
+                "y": 229.9156679982246
+            }
+        },
+        "tileset.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.9058,
+            "scaleInEditor": 0.69
+        },
+        "untitled.tmx": {
+            "scale": 0.788,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 956.8527918781726,
+                "y": -97.71573604060916
+            }
+        }
+    },
+    "last.exportedFilePath": "/Users/anhadchadha/Desktop/Judy_Hopps/assets",
+    "last.externalTilesetPath": "/Users/anhadchadha/Desktop/Judy_Hopps/assets",
+    "last.imagePath": "/Users/anhadchadha/Desktop/Judy_Hopps/assets",
+    "map.height": 13,
+    "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 240,
+    "openFiles": [
+        "untitled.tmx"
+    ],
+    "project": "map.tiled-project",
+    "recentFiles": [
+        "assets/lock.tsx",
+        "nick_wilde_cage_fixed.tsx",
+        "untitled.tmx",
+        "tileset.tsx"
+    ],
+    "resizeMap.removeObjects": true,
+    "tileset.lastUsedFilter": "All Files (*)",
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.margin": 0,
+    "tileset.spacing": 0,
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    },
+    "tileset.type": 1
+}
