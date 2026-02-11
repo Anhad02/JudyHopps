@@ -394,16 +394,12 @@ function collectKey(player, keyCollider) {
 // ───────────────────────────────────────────────────────────────
 function hitPlayer(player, bullet) {
     // Deactivate the bullet that hit the player
-    bullet.setActive(false);
-    bullet.setVisible(false);
-    bullet.body.stop();
+    deactivateBullet(bullet);
 
     // Clear ALL active bullets to prevent respawn loops
     bullets.getChildren().forEach(b => {
         if (b.active) {
-            b.setActive(false);
-            b.setVisible(false);
-            b.body.stop();
+            deactivateBullet(b);
         }
     });
 
@@ -583,6 +579,7 @@ function fireEnemyBullet(enemy, direction) {
     bullet.setVisible(true);
     bullet.setScale(0.02);  // Scale down bullet to fit game aesthetics
     bullet.body.setAllowGravity(false);
+    bullet.body.enable = true;  // Re-enable physics body (may have been disabled)
 
     // Set bullet velocity based on direction
     const bulletSpeed = 200;
@@ -591,25 +588,35 @@ function fireEnemyBullet(enemy, direction) {
     // Flip bullet sprite based on direction (left-facing needs to be flipped)
     bullet.setFlipX(direction === -1);
 
-    // Destroy bullet after it travels off screen or after a timeout
+    // Deactivate bullet after a timeout (3 seconds)
     enemy.scene.time.delayedCall(3000, () => {
         if (bullet.active) {
-            bullet.setActive(false);
-            bullet.setVisible(false);
-            bullet.body.stop();
+            deactivateBullet(bullet);
         }
     });
 }
 
 function updateBullets() {
+    const camera = game.scene.scenes[1].cameras.main;  // GameScene camera
+    
     bullets.getChildren().forEach(bullet => {
         if (bullet.active) {
-            // Deactivate bullets that go off the map
-            if (bullet.x < 0 || bullet.x > MAP_WIDTH || bullet.y < 0 || bullet.y > MAP_HEIGHT) {
-                bullet.setActive(false);
-                bullet.setVisible(false);
-                bullet.body.stop();
+            // Deactivate bullets that leave the camera view
+            const inCameraView = camera.worldView.contains(bullet.x, bullet.y);
+            const offMap = bullet.x < 0 || bullet.x > MAP_WIDTH || bullet.y < 0 || bullet.y > MAP_HEIGHT;
+            
+            if (!inCameraView || offMap) {
+                deactivateBullet(bullet);
             }
         }
     });
+}
+
+// Helper function to fully deactivate a bullet
+function deactivateBullet(bullet) {
+    bullet.setActive(false);
+    bullet.setVisible(false);
+    bullet.body.stop();
+    bullet.body.enable = false;  // Disable physics body to prevent collisions
+    bullet.setPosition(-100, -100);  // Move off-screen
 }
