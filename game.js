@@ -25,6 +25,9 @@ class StartScene extends Phaser.Scene {
         this.load.image('bullet', 'assets/bullet.png');
         this.load.image('lock', 'assets/lock.png');
         this.load.image('key', 'assets/key.png');
+        this.load.image('burrito', 'assets/burrito.png');
+        this.load.image('nick', 'assets/nick_wilde_cage_fixed.png');
+        this.load.image('safe', 'assets/safe.png');
     }
 
     create() {
@@ -127,6 +130,9 @@ let lockedBarsGroup;
 let keyLockGroup;
 let enemies;
 let bullets;
+let tacoCount = 0;  // Track number of tacos collected (for later use)
+let burritoCount = 0;
+let burritoText;
 
 // ───────────────────────────────────────────────────────────────
 function createGame() {
@@ -285,6 +291,61 @@ function createGame() {
         this.physics.add.overlap(player, this.keyCollider, collectKey, null, this);
     }
 
+    // ── Burrito collection ─────────────────────────────────────
+    burritoCount = 0;
+    tacoCount = 0;  // Reset taco count on game start
+    const burritosLayer = map.getObjectLayer('Tacos');
+    if (burritosLayer && burritosLayer.objects) {
+        burritosLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            // Tile objects (with gid) have origin at bottom-left, so adjust y position
+            const xPos = obj.x + obj.width / 2;
+            const yPos = obj.y - obj.height / 2;
+            // Create visible burrito sprite
+            const burritoSprite = this.add.image(xPos, yPos, 'burrito');
+            burritoSprite.setDisplaySize(obj.width, obj.height);
+            // Create invisible collision zone (static, won't fall)
+            const burritoZone = this.add.rectangle(xPos, yPos, obj.width, obj.height, 0x000000, 0);
+            this.physics.add.existing(burritoZone, true);  // true = static body
+            burritoZone.burritoSprite = burritoSprite;
+            this.physics.add.overlap(player, burritoZone, collectBurrito, null, this);
+        });
+    }
+    // Burrito count UI - top right corner
+    burritoText = this.add.text(this.cameras.main.width - 16, 16, 'Burritos: 0/5', {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+
+    // ── Nick character from object layer ─────────────────────────
+    const nickLayer = map.getObjectLayer('nick');
+    if (nickLayer && nickLayer.objects) {
+        nickLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            // Tile objects have origin at bottom-left, so adjust y position
+            const xPos = obj.x + obj.width / 2;
+            const yPos = obj.y - obj.height / 2;
+            const nickSprite = this.add.image(xPos, yPos, 'nick');
+            nickSprite.setDisplaySize(obj.width, obj.height);
+        });
+    }
+
+    // ── Safe from object layer ───────────────────────────────────
+    const safeLayer = map.getObjectLayer('Safe');
+    if (safeLayer && safeLayer.objects) {
+        safeLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            // Tile objects have origin at bottom-left, so adjust y position
+            const xPos = obj.x + obj.width / 2;
+            const yPos = obj.y - obj.height / 2;
+            const safeSprite = this.add.image(xPos, yPos, 'safe');
+            safeSprite.setDisplaySize(obj.width, obj.height);
+        });
+    }
+
     // ── Camera follows player ─────────────────────────────────
     this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
     this.cameras.main.startFollow(player, true, 0.1, 0.1);
@@ -387,6 +448,22 @@ function collectKey(player, keyCollider) {
     scene.lockColliders = [];
     scene.keySprite = null;
     scene.keyCollider = null;
+}
+
+// ───────────────────────────────────────────────────────────────
+// Collect Burrito
+// ───────────────────────────────────────────────────────────────
+function collectBurrito(player, burritoZone) {
+    // Destroy the visible burrito sprite
+    if (burritoZone.burritoSprite) {
+        burritoZone.burritoSprite.destroy();
+    }
+    // Destroy the collision zone
+    burritoZone.destroy();
+    // Increment counters and update UI
+    burritoCount++;
+    tacoCount++;  // Track taco collection for later use
+    burritoText.setText('Burritos: ' + burritoCount + '/5');
 }
 
 // ───────────────────────────────────────────────────────────────

@@ -10,18 +10,24 @@
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
         "assets/images.tsx": {
-            "dynamicWrapping": true
+            "dynamicWrapping": true,
+            "scaleInEditor": 0.234
         },
         "assets/lock.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1.7454
         },
         "assets/tileMapGame..tmj": {
-            "scale": 1.6498,
-            "selectedLayer": 4,
+            "expandedObjectLayers": [
+                6,
+                17,
+                15
+            ],
+            "scale": 2.8172,
+            "selectedLayer": 7,
             "viewCenter": {
-                "x": 1554.7339071402594,
-                "y": 297.0056976603225
+                "x": 1555.090160442993,
+                "y": 259.12253301150076
             }
         },
         "assets/tileMapGame..tmj#tileset": {
@@ -29,14 +35,15 @@
             "scaleInDock": 1.2304
         },
         "assets/tileMapGame.tmj": {
-            "scale": 1.0145,
-            "selectedLayer": 0,
+            "scale": 2.1663,
+            "selectedLayer": 7,
             "viewCenter": {
-                "x": 1483.489403647117,
-                "y": 276.9837358304584
+                "x": -94.63139915985782,
+                "y": 396.99025989013523
             }
         },
         "assets/tileMapGame.tmj#tileset": {
+            "dynamicWrapping": false,
             "scaleInDock": 1
         },
         "nick_wilde_cage_fixed.tsx": {
@@ -45,16 +52,14 @@
         },
         "tileMapGame.tmx": {
             "expandedObjectLayers": [
-                10,
-                7,
                 6,
-                15
+                16
             ],
-            "scale": 1.1265,
-            "selectedLayer": 1,
+            "scale": 0.7022,
+            "selectedLayer": -1,
             "viewCenter": {
-                "x": 1561.473590767865,
-                "y": 229.9156679982246
+                "x": 1438.3366562232982,
+                "y": 509.8262603246938
             }
         },
         "tileset.tsx": {
@@ -85,6 +90,8 @@
     ],
     "project": "map.tiled-project",
     "recentFiles": [
+        "assets/images.tsx",
+        "assets/tileMapGame..tmj",
         "assets/lock.tsx",
         "nick_wilde_cage_fixed.tsx",
         "untitled.tmx",
