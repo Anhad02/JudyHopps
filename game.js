@@ -17,7 +17,7 @@ class StartScene extends Phaser.Scene {
         // Load all game assets here so they're ready when game starts
         this.load.tilemapTiledJSON('map', 'assets/tileMapNew.tmj');
         this.load.image('tileset', 'assets/tileset.png');
-        this.load.image('mario', 'assets/mario.png');
+        this.load.image('mario', 'assets/judy_left.png');
         this.load.spritesheet('ice_agent', 'assets/ICE_agent.png', {
             frameWidth: 72,
             frameHeight: 72
@@ -273,7 +273,7 @@ function createGame() {
 
     // ── Player (Mario) ────────────────────────────────────────
     player = this.physics.add.sprite(350, MAP_HEIGHT - 100, 'mario');
-    player.setDisplaySize(18, 26);  // 10% smaller than 20x29
+    player.setDisplaySize(36, 36);  // 10% smaller than 20x29
     player.body.setSize(player.width * 0.6, player.height * 0.9);
     player.body.setOffset(player.width * 0.2, player.height * 0.1);
     player.setBounce(0.1);
@@ -320,7 +320,7 @@ function createGame() {
         strokeThickness: 3
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
-    // ── Nick character from object layer ─────────────────────────
+    // ── Nick character from object layer (with collision) ─────────────────────────
     const nickLayer = map.getObjectLayer('nick');
     if (nickLayer && nickLayer.objects) {
         nickLayer.objects.forEach(obj => {
@@ -328,12 +328,21 @@ function createGame() {
             // Tile objects have origin at bottom-left, so adjust y position
             const xPos = obj.x + obj.width / 2;
             const yPos = obj.y - obj.height / 2;
+            // Create visible sprite
             const nickSprite = this.add.image(xPos, yPos, 'nick');
             nickSprite.setDisplaySize(obj.width, obj.height);
+            // Create smaller collision box that fits the actual sprite better
+            // Reduce width to 70% and height to 85%, positioned at bottom of sprite
+            const colliderWidth = obj.width * 0.8;
+            const colliderHeight = obj.height * 0.80;
+            const colliderY = yPos + (obj.height - colliderHeight) / 2;  // Shift down to align with feet
+            const nickCollider = this.add.rectangle(xPos, colliderY, colliderWidth, colliderHeight, 0x000000, 0);
+            this.physics.add.existing(nickCollider, true);  // true = static body
+            this.physics.add.collider(player, nickCollider);
         });
     }
 
-    // ── Safe from object layer ───────────────────────────────────
+    // ── Safe from object layer (with password protection) ───────────────────────────────────
     const safeLayer = map.getObjectLayer('Safe');
     if (safeLayer && safeLayer.objects) {
         safeLayer.objects.forEach(obj => {
@@ -341,10 +350,30 @@ function createGame() {
             // Tile objects have origin at bottom-left, so adjust y position
             const xPos = obj.x + obj.width / 2;
             const yPos = obj.y - obj.height / 2;
+            // Create visible sprite
             const safeSprite = this.add.image(xPos, yPos, 'safe');
             safeSprite.setDisplaySize(obj.width, obj.height);
+            // Create invisible collision box (static body)
+            const safeCollider = this.add.rectangle(xPos, yPos, obj.width, obj.height, 0x000000, 0);
+            this.physics.add.existing(safeCollider, true);  // true = static body
+            this.physics.add.collider(player, safeCollider);
+            
+            // Create a slightly larger trigger zone around the safe for interaction
+            const triggerPadding = 10;
+            const safeTrigger = this.add.rectangle(xPos, yPos, obj.width + triggerPadding * 2, obj.height + triggerPadding * 2, 0x000000, 0);
+            this.physics.add.existing(safeTrigger, true);  // static body
+            
+            // Store references for cleanup when safe is unlocked
+            safeTrigger.safeSprite = safeSprite;
+            safeTrigger.safeCollider = safeCollider;
+            
+            // Trigger dialog when player overlaps the trigger zone
+            this.physics.add.overlap(player, safeTrigger, openSafeDialog, null, this);
         });
     }
+    
+    // Store reference to safe dialog state on the scene
+    this.safeDialogOpen = false;
 
     // ── Camera follows player ─────────────────────────────────
     this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
@@ -467,6 +496,129 @@ function collectBurrito(player, burritoZone) {
 }
 
 // ───────────────────────────────────────────────────────────────
+// Safe Password Dialog
+// ───────────────────────────────────────────────────────────────
+const SAFE_PASSWORD = 'Pab2310$';  // The correct password
+const SAFE_HINT = 'Hint: Only a Sabharwal can open this safe';
+
+function openSafeDialog(player, safeTrigger) {
+    const scene = player.scene;
+    
+    // Don't open multiple dialogs
+    if (scene.safeDialogOpen) return;
+    scene.safeDialogOpen = true;
+    
+    // Pause player movement
+    player.setVelocity(0, 0);
+    
+    // Create dialog background (fixed to camera)
+    const dialogBg = scene.add.rectangle(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2,
+        300, 180,
+        0x000000, 0.85
+    ).setScrollFactor(0).setDepth(200);
+    
+    // Create dialog border
+    const dialogBorder = scene.add.rectangle(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2,
+        300, 180
+    ).setScrollFactor(0).setDepth(200).setStrokeStyle(3, 0xffffff);
+    
+    // Title text
+    const titleText = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2 - 60,
+        'Enter Safe Password',
+        { fontSize: '16px', fontFamily: 'Arial', color: '#ffffff' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    
+    // Hint text
+    const hintText = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2 - 35,
+        SAFE_HINT,
+        { fontSize: '12px', fontFamily: 'Arial', color: '#aaaaaa' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    
+    // Password display (shows typed characters as *)
+    let enteredPassword = '';
+    const passwordDisplay = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2,
+        '[ Type password... ]',
+        { fontSize: '14px', fontFamily: 'Arial', color: '#ffff00' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    
+    // Instructions
+    const instructionText = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2 + 35,
+        'Press ENTER to submit, ESC to cancel',
+        { fontSize: '10px', fontFamily: 'Arial', color: '#888888' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    
+    // Error message (hidden initially)
+    const errorText = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2 + 55,
+        '',
+        { fontSize: '12px', fontFamily: 'Arial', color: '#ff4444' }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    
+    // Store all dialog elements for cleanup
+    const dialogElements = [dialogBg, dialogBorder, titleText, hintText, passwordDisplay, instructionText, errorText];
+    
+    // Function to close dialog
+    const closeDialog = () => {
+        dialogElements.forEach(el => el.destroy());
+        scene.safeDialogOpen = false;
+        scene.input.keyboard.off('keydown');
+    };
+    
+    // Function to handle successful password
+    const unlockSafe = () => {
+        closeDialog();
+        // Destroy the safe sprite, collider, and trigger zone
+        if (safeTrigger.safeSprite) {
+            safeTrigger.safeSprite.destroy();
+        }
+        if (safeTrigger.safeCollider) {
+            safeTrigger.safeCollider.destroy();
+        }
+        safeTrigger.destroy();
+    };
+    
+    // Listen for keyboard input
+    scene.input.keyboard.on('keydown', (event) => {
+        if (!scene.safeDialogOpen) return;
+        
+        if (event.key === 'Escape') {
+            closeDialog();
+        } else if (event.key === 'Enter') {
+            // Check password
+            if (enteredPassword.toLowerCase() === SAFE_PASSWORD.toLowerCase()) {
+                unlockSafe();
+            } else {
+                errorText.setText('Incorrect password!');
+                enteredPassword = '';
+                passwordDisplay.setText('[ Type password... ]');
+            }
+        } else if (event.key === 'Backspace') {
+            enteredPassword = enteredPassword.slice(0, -1);
+            passwordDisplay.setText(enteredPassword.length > 0 ? '*'.repeat(enteredPassword.length) : '[ Type password... ]');
+            errorText.setText('');
+        } else if (event.key.length === 1 && enteredPassword.length < 20) {
+            // Single character key press
+            enteredPassword += event.key;
+            passwordDisplay.setText('*'.repeat(enteredPassword.length));
+            errorText.setText('');
+        }
+    });
+}
+
+// ───────────────────────────────────────────────────────────────
 // Player Hit by Bullet
 // ───────────────────────────────────────────────────────────────
 function hitPlayer(player, bullet) {
@@ -513,10 +665,10 @@ function updateGame() {
     // Horizontal movement
     if (cursors.left.isDown) {
         player.setVelocityX(-speed);
-        player.setFlipX(true);
+        player.setFlipX(false);  // judy_right.png faces right, so no flip = left
     } else if (cursors.right.isDown) {
         player.setVelocityX(speed);
-        player.setFlipX(false);
+        player.setFlipX(true);   // Flip to face right
     } else {
         player.setVelocityX(0);
     }
