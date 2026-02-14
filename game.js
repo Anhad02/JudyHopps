@@ -130,7 +130,6 @@ let lockedBarsGroup;
 let keyLockGroup;
 let enemies;
 let bullets;
-let tacoCount = 0;  // Track number of tacos collected (for later use)
 let burritoCount = 0;
 let burritoText;
 
@@ -293,7 +292,6 @@ function createGame() {
 
     // ── Burrito collection ─────────────────────────────────────
     burritoCount = 0;
-    tacoCount = 0;  // Reset taco count on game start
     const burritosLayer = map.getObjectLayer('Tacos');
     if (burritosLayer && burritosLayer.objects) {
         burritosLayer.objects.forEach(obj => {
@@ -322,6 +320,8 @@ function createGame() {
 
     // ── Nick character from object layer (with collision) ─────────────────────────
     const nickLayer = map.getObjectLayer('nick');
+    // Store Nick objects on scene so they can be removed when all burritos collected
+    this.nickObjects = [];
     if (nickLayer && nickLayer.objects) {
         nickLayer.objects.forEach(obj => {
             if (!obj.visible) return;
@@ -339,6 +339,8 @@ function createGame() {
             const nickCollider = this.add.rectangle(xPos, colliderY, colliderWidth, colliderHeight, 0x000000, 0);
             this.physics.add.existing(nickCollider, true);  // true = static body
             this.physics.add.collider(player, nickCollider);
+            // Store references for removal
+            this.nickObjects.push({ sprite: nickSprite, collider: nickCollider });
         });
     }
 
@@ -491,8 +493,19 @@ function collectBurrito(player, burritoZone) {
     burritoZone.destroy();
     // Increment counters and update UI
     burritoCount++;
-    tacoCount++;  // Track taco collection for later use
     burritoText.setText('Burritos: ' + burritoCount + '/5');
+    
+    // When all 5 burritos collected, remove Nick
+    if (burritoCount >= 5) {
+        const scene = player.scene;
+        if (scene.nickObjects && scene.nickObjects.length > 0) {
+            scene.nickObjects.forEach(nick => {
+                if (nick.sprite) nick.sprite.destroy();
+                if (nick.collider) nick.collider.destroy();
+            });
+            scene.nickObjects = [];
+        }
+    }
 }
 
 // ───────────────────────────────────────────────────────────────
