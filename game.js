@@ -35,6 +35,10 @@ class StartScene extends Phaser.Scene {
         this.load.image('biscoff', 'assets/biscoff.png');
         this.load.image('biscoff_sign', 'assets/biscoff_sign.png');
         this.load.image('thisWaySign', 'assets/thisWaySign.png');
+        this.load.spritesheet('cat', 'assets/animals/cat.png', { frameWidth: 250, frameHeight: 125 });
+        this.load.spritesheet('red_panda', 'assets/animals/red_panda.png', { frameWidth: 80, frameHeight: 86 });
+        this.load.spritesheet('seal', 'assets/animals/seal.png', { frameWidth: 160, frameHeight: 160 });
+        this.load.spritesheet('penguin', 'assets/animals/penguin.png', { frameWidth: 160, frameHeight: 160 });
     }
 
     create() {
@@ -136,6 +140,7 @@ let leapBarsGroup;
 let lockedBarsGroup;
 let keyLockGroup;
 let enemies;
+let cat;
 let bullets;
 let burritoCount = 0;
 let burritoText;
@@ -278,7 +283,7 @@ function createGame() {
     this.keyCollider = keyCollider;
 
     // ── Player (Judy) ────────────────────────────────────────
-    player = this.physics.add.sprite(350, 368, 'judy');  // 368 = ground level
+    player = this.physics.add.sprite(MAP_WIDTH - 320, 368, 'judy');  // Spawn at end of map, ground level
     // Scale the sprite
     player.setScale(0.30);  // Scale down from 500x500
     // Judy is centered in frame with feet around y=380 in the 500x500 frame
@@ -528,6 +533,38 @@ function createGame() {
         repeat: -1
     });
 
+    // Cat walk animation (8 frames: 2 rows x 4 columns)
+    this.anims.create({
+        key: 'cat_walk',
+        frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 7 }),
+        frameRate: 8,
+        repeat: -1
+    });
+
+    // Red panda standing animation (9 frames: 1 row x 9 columns)
+    this.anims.create({
+        key: 'red_panda_stand',
+        frames: this.anims.generateFrameNumbers('red_panda', { start: 0, end: 8 }),
+        frameRate: 2,
+        repeat: -1
+    });
+
+    // Seal standing animation (8 frames: 2 rows x 4 columns, uniform 160x160 grid)
+    this.anims.create({
+        key: 'seal_stand',
+        frames: this.anims.generateFrameNumbers('seal', { start: 0, end: 7 }),
+        frameRate: 2,
+        repeat: -1
+    });
+
+    // Penguin standing animation (same layout as seal: 640x320, 2 rows x 4 columns)
+    this.anims.create({
+        key: 'penguin_stand',
+        frames: this.anims.generateFrameNumbers('penguin', { start: 0, end: 7 }),
+        frameRate: 1,
+        repeat: -1
+    });
+
     // ── Create Enemies ──────────────────────────────────────────
     enemies = this.physics.add.group();
     this.groundLevelEnemies = [];  // Track ground level enemies separately
@@ -555,6 +592,54 @@ function createGame() {
     this.physics.add.collider(enemies, groundGroup);
     this.physics.add.collider(enemies, platformsGroup);
     this.physics.add.collider(enemies, lockedBarsGroup);
+
+    // ── Cat at end of map (walks left-right like enemies) ─────────────────────────────────
+    const catSpawnX = MAP_WIDTH - 300;  // Towards end of map, shifted left
+    const catSpawnY = 372;               // Ground level
+    const catPatrolRange = 60;
+    cat = this.physics.add.sprite(catSpawnX, catSpawnY, 'cat');
+    cat.setScale(0.2);  // Scale down to fit
+    cat.setBounce(0);
+    cat.body.setAllowGravity(false);
+    cat.refreshBody();
+    cat.patrolData = {
+        spawnX: catSpawnX,
+        range: catPatrolRange,
+        speed: 40,
+        direction: 1   // 1 = right (cat faces right in sprite)
+    };
+    cat.play('cat_walk');
+    this.physics.add.collider(cat, groundGroup);
+
+    // ── Red panda towards end of map (standing animation only) ─────────────────────────
+    const redPandaX = MAP_WIDTH - 200;
+    const redPandaY = 364;
+    const redPanda = this.physics.add.sprite(redPandaX, redPandaY, 'red_panda');
+    redPanda.setScale(0.5);  // 20% smaller than 0.8
+    redPanda.body.setAllowGravity(false);
+    redPanda.refreshBody();
+    redPanda.play('red_panda_stand');
+    this.physics.add.collider(redPanda, groundGroup);
+
+    // ── Seal towards end of map (standing animation) ───────────────────────────────────
+    const sealX = MAP_WIDTH - 120;
+    const sealY = 368;
+    const sealSprite = this.physics.add.sprite(sealX, sealY, 'seal');
+    sealSprite.setScale(0.5);
+    sealSprite.body.setAllowGravity(false);
+    sealSprite.refreshBody();
+    sealSprite.play('seal_stand');
+    this.physics.add.collider(sealSprite, groundGroup);
+
+    // ── Penguin towards end of map (standing animation, same layout as seal) ───────────
+    const penguinX = MAP_WIDTH - 360;
+    const penguinY = 360;
+    const penguinSprite = this.physics.add.sprite(penguinX, penguinY, 'penguin');
+    penguinSprite.setScale(0.4);
+    penguinSprite.body.setAllowGravity(false);
+    penguinSprite.refreshBody();
+    penguinSprite.play('penguin_stand');
+    this.physics.add.collider(penguinSprite, groundGroup);
 
     // ── Create Bullets Group ──────────────────────────────────────
     bullets = this.physics.add.group({
@@ -764,7 +849,7 @@ function hitPlayer(player, bullet) {
     });
 
     // Respawn player at starting position
-    player.setPosition(350, 368);
+    player.setPosition(MAP_WIDTH - 320, 368);
     player.setVelocity(0, 0);
 }
 
@@ -773,7 +858,7 @@ function hitPlayer(player, bullet) {
 // ───────────────────────────────────────────────────────────────
 function hitBiscoff(player, biscoffZone) {
     // Respawn player at starting position (same as getting hit by bullet)
-    player.setPosition(350, 368);
+    player.setPosition(MAP_WIDTH - 320, 368);
     player.setVelocity(0, 0);
 }
 
@@ -841,6 +926,11 @@ function updateGame() {
     enemies.getChildren().forEach(enemy => {
         updateEnemyPatrol(enemy);
     });
+
+    // Update cat patrol
+    if (cat && cat.active) {
+        updateCatPatrol(cat);
+    }
 
     // Update bullets (cleanup off-screen bullets)
     updateBullets();
@@ -952,6 +1042,28 @@ function updateEnemyPatrol(enemy) {
             data.direction = data.lastDirection;
             enemy.play(data.direction === 1 ? 'enemy_right' : 'enemy_left');
         }
+    }
+}
+
+// ───────────────────────────────────────────────────────────────
+// Cat Patrol (walk left-right at end of map)
+// ───────────────────────────────────────────────────────────────
+function updateCatPatrol(catSprite) {
+    const data = catSprite.patrolData;
+    if (!data) return;
+
+    const minX = data.spawnX - data.range;
+    const maxX = data.spawnX + data.range;
+
+    catSprite.setVelocityX(data.speed * data.direction);
+
+    // Reverse at bounds
+    if (catSprite.x >= maxX && data.direction === 1) {
+        data.direction = -1;
+        catSprite.setFlipX(true);
+    } else if (catSprite.x <= minX && data.direction === -1) {
+        data.direction = 1;
+        catSprite.setFlipX(false);
     }
 }
 
