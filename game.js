@@ -278,7 +278,7 @@ function createGame() {
     this.keyCollider = keyCollider;
 
     // ── Player (Judy) ────────────────────────────────────────
-    player = this.physics.add.sprite(350, MAP_HEIGHT - 200, 'judy');
+    player = this.physics.add.sprite(350, 368, 'judy');  // 368 = ground level
     // Scale the sprite
     player.setScale(0.30);  // Scale down from 500x500
     // Judy is centered in frame with feet around y=380 in the 500x500 frame
@@ -764,7 +764,7 @@ function hitPlayer(player, bullet) {
     });
 
     // Respawn player at starting position
-    player.setPosition(350, MAP_HEIGHT - 200);
+    player.setPosition(350, 368);
     player.setVelocity(0, 0);
 }
 
@@ -773,7 +773,7 @@ function hitPlayer(player, bullet) {
 // ───────────────────────────────────────────────────────────────
 function hitBiscoff(player, biscoffZone) {
     // Respawn player at starting position (same as getting hit by bullet)
-    player.setPosition(350, MAP_HEIGHT - 200);
+    player.setPosition(350, 368);
     player.setVelocity(0, 0);
 }
 
