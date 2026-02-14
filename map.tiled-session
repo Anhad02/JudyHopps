@@ -35,16 +35,20 @@
             "scaleInDock": 1.2304
         },
         "assets/tileMapGame.tmj": {
-            "scale": 2.1663,
-            "selectedLayer": 7,
+            "expandedObjectLayers": [
+                25
+            ],
+            "scale": 0.7,
+            "selectedLayer": 9,
             "viewCenter": {
-                "x": -94.63139915985782,
-                "y": 396.99025989013523
+                "x": 1600.7142857142858,
+                "y": 374.2857142857143
             }
         },
         "assets/tileMapGame.tmj#tileset": {
             "dynamicWrapping": false,
-            "scaleInDock": 1
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "nick_wilde_cage_fixed.tsx": {
             "scaleInDock": 0.3714,
@@ -58,8 +62,8 @@
             "scale": 0.7022,
             "selectedLayer": -1,
             "viewCenter": {
-                "x": 1438.3366562232982,
-                "y": 509.8262603246938
+                "x": 1587.1546567929365,
+                "y": 494.16120763315297
             }
         },
         "tileset.tsx": {

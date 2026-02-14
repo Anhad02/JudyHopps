@@ -17,7 +17,10 @@ class StartScene extends Phaser.Scene {
         // Load all game assets here so they're ready when game starts
         this.load.tilemapTiledJSON('map', 'assets/tileMapNew.tmj');
         this.load.image('tileset', 'assets/tileset.png');
-        this.load.image('mario', 'assets/judy_left.png');
+        this.load.spritesheet('judy', 'assets/judy_hopps_spritesheet.png', {
+            frameWidth: 500,
+            frameHeight: 500
+        });
         this.load.spritesheet('ice_agent', 'assets/ICE_agent.png', {
             frameWidth: 72,
             frameHeight: 72
@@ -28,6 +31,7 @@ class StartScene extends Phaser.Scene {
         this.load.image('burrito', 'assets/burrito.png');
         this.load.image('nick', 'assets/nick_wilde_cage_fixed.png');
         this.load.image('safe', 'assets/safe.png');
+        this.load.image('car', 'assets/car.png');
     }
 
     create() {
@@ -270,11 +274,17 @@ function createGame() {
     this.keySprite = keySprite;
     this.keyCollider = keyCollider;
 
-    // ── Player (Mario) ────────────────────────────────────────
-    player = this.physics.add.sprite(350, MAP_HEIGHT - 100, 'mario');
-    player.setDisplaySize(36, 36);  // 10% smaller than 20x29
-    player.body.setSize(player.width * 0.6, player.height * 0.9);
-    player.body.setOffset(player.width * 0.2, player.height * 0.1);
+    // ── Player (Judy) ────────────────────────────────────────
+    player = this.physics.add.sprite(350, MAP_HEIGHT - 200, 'judy');
+    // Scale the sprite
+    player.setScale(0.30);  // Scale down from 500x500
+    // Judy is centered in frame with feet around y=380 in the 500x500 frame
+    // Set origin to where her feet are (0.5 horizontal center, ~0.76 vertical for feet)
+    player.setOrigin(0.5, 0.76);
+    // Set hitbox to cover just Judy's body (not the empty space)
+    // Reduce height and move offset down to start at Judy's head
+    player.body.setSize(60, 110);
+    player.body.setOffset(220, 220);  // Centered horizontally, reduced space above head
     player.setBounce(0.1);
     player.setCollideWorldBounds(true);
 
@@ -293,6 +303,7 @@ function createGame() {
     // ── Burrito collection ─────────────────────────────────────
     burritoCount = 0;
     const burritosLayer = map.getObjectLayer('Tacos');
+    this.easyBurritoObjects = [];  // Track easyBurrito objects for later activation
     if (burritosLayer && burritosLayer.objects) {
         burritosLayer.objects.forEach(obj => {
             if (!obj.visible) return;
@@ -306,6 +317,14 @@ function createGame() {
             const burritoZone = this.add.rectangle(xPos, yPos, obj.width, obj.height, 0x000000, 0);
             this.physics.add.existing(burritoZone, true);  // true = static body
             burritoZone.burritoSprite = burritoSprite;
+            
+            // Special handling for easyBurrito - hidden until ground enemies defeated
+            if (obj.name === 'easyBurrito') {
+                burritoSprite.setVisible(false);
+                burritoZone.body.enable = false;
+                this.easyBurritoObjects.push({ sprite: burritoSprite, zone: burritoZone });
+            }
+            
             this.physics.add.overlap(player, burritoZone, collectBurrito, null, this);
         });
     }
@@ -331,6 +350,18 @@ function createGame() {
             // Create visible sprite
             const nickSprite = this.add.image(xPos, yPos, 'nick');
             nickSprite.setDisplaySize(obj.width, obj.height);
+            // Create text bubble above Nick
+            const nickTextBubble = this.add.text(xPos, yPos - obj.height / 2 - 20, 
+                'Find all Shawarmas\nto save Nick!', 
+                { 
+                    fontSize: '10px', 
+                    fontFamily: 'Arial', 
+                    color: '#ffffff',
+                    backgroundColor: '#333333',
+                    padding: { x: 6, y: 4 },
+                    align: 'center'
+                }
+            ).setOrigin(0.5);
             // Create smaller collision box that fits the actual sprite better
             // Reduce width to 70% and height to 85%, positioned at bottom of sprite
             const colliderWidth = obj.width * 0.8;
@@ -340,7 +371,7 @@ function createGame() {
             this.physics.add.existing(nickCollider, true);  // true = static body
             this.physics.add.collider(player, nickCollider);
             // Store references for removal
-            this.nickObjects.push({ sprite: nickSprite, collider: nickCollider });
+            this.nickObjects.push({ sprite: nickSprite, collider: nickCollider, textBubble: nickTextBubble });
         });
     }
 
@@ -377,6 +408,39 @@ function createGame() {
     // Store reference to safe dialog state on the scene
     this.safeDialogOpen = false;
 
+    // ── Car from Mexicans object layer (with text bubble) ───────────────────────────────────
+    const mexicansLayer = map.getObjectLayer('Mexicans');
+    if (mexicansLayer && mexicansLayer.objects) {
+        mexicansLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            if (obj.name === 'car') {
+                const xPos = obj.x + obj.width / 2;
+                const yPos = obj.y - obj.height / 2;
+                // Create car sprite
+                const carSprite = this.add.image(xPos, yPos, 'car');
+                carSprite.setDisplaySize(obj.width, obj.height);
+                // Create text bubble above the car
+                const textBubble = this.add.text(xPos, yPos - obj.height / 2 - 30, 
+                    '¡Sálvanos, Judy!\n¡Salta sobre sus cabezas!', 
+                    { 
+                        fontSize: '10px', 
+                        fontFamily: 'Arial', 
+                        color: '#ffffff',
+                        backgroundColor: '#333333',
+                        padding: { x: 6, y: 4 },
+                        align: 'center'
+                    }
+                ).setOrigin(0.5);
+                // Store references on scene
+                this.carSprite = carSprite;
+                this.carTextBubble = textBubble;
+            }
+        });
+    }
+    
+    // Track if ground enemies have been defeated
+    this.groundEnemiesDefeated = false;
+
     // ── Camera follows player ─────────────────────────────────
     this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
     this.cameras.main.startFollow(player, true, 0.1, 0.1);
@@ -384,6 +448,17 @@ function createGame() {
 
     // ── Controls ──────────────────────────────────────────────
     cursors = this.input.keyboard.createCursorKeys();
+
+    // ── Judy Animations ────────────────────────────────────────
+    // 35 frames total (7 rows x 5 columns), frames 0-34
+    this.anims.create({
+        key: 'judy_idle',
+        frames: this.anims.generateFrameNumbers('judy', { start: 0, end: 34 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    // Start the idle animation
+    player.play('judy_idle');
 
     // ── Enemy Animations ────────────────────────────────────────
     // Frames 0-5: front, 6-11: left, 12-17: right, 18-23: back
@@ -414,11 +489,12 @@ function createGame() {
 
     // ── Create Enemies ──────────────────────────────────────────
     enemies = this.physics.add.group();
+    this.groundLevelEnemies = [];  // Track ground level enemies separately
 
     // Spawn enemies at specific coordinates (y=368 is just above ground level)
-    // Ground level enemies
-    createPatrolEnemy(this, 700, 368, 30);
-    createPatrolEnemy(this, 750, 368, 30);
+    // Ground level enemies - store references for tracking
+    this.groundLevelEnemies.push(createPatrolEnemy(this, 700, 368, 30));
+    this.groundLevelEnemies.push(createPatrolEnemy(this, 750, 368, 30));
     
     // Enemies on parkour platforms
     createPatrolEnemy(this, 1096, 305, 20);  // parkour1 (x=1072, y=320, width=48) - centered on platform
@@ -502,6 +578,7 @@ function collectBurrito(player, burritoZone) {
             scene.nickObjects.forEach(nick => {
                 if (nick.sprite) nick.sprite.destroy();
                 if (nick.collider) nick.collider.destroy();
+                if (nick.textBubble) nick.textBubble.destroy();
             });
             scene.nickObjects = [];
         }
@@ -675,13 +752,32 @@ function updateGame() {
     const speed = 140;
     const jumpVelocity = -350;
 
+    // Check if ground level enemies are defeated
+    if (!this.groundEnemiesDefeated && this.groundLevelEnemies) {
+        const allDefeated = this.groundLevelEnemies.every(enemy => !enemy.active);
+        if (allDefeated) {
+            this.groundEnemiesDefeated = true;
+            // Change car text bubble
+            if (this.carTextBubble) {
+                this.carTextBubble.setText('Muchas gracias! !\nRecoge todas las shawarmas.');
+            }
+            // Make easyBurrito visible and collectible
+            if (this.easyBurritoObjects) {
+                this.easyBurritoObjects.forEach(obj => {
+                    obj.sprite.setVisible(true);
+                    obj.zone.body.enable = true;
+                });
+            }
+        }
+    }
+
     // Horizontal movement
     if (cursors.left.isDown) {
         player.setVelocityX(-speed);
-        player.setFlipX(false);  // judy_right.png faces right, so no flip = left
+        player.setFlipX(true);   // Flip to face left
     } else if (cursors.right.isDown) {
         player.setVelocityX(speed);
-        player.setFlipX(true);   // Flip to face right
+        player.setFlipX(false);  // No flip = face right
     } else {
         player.setVelocityX(0);
     }
