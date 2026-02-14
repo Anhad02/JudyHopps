@@ -37,9 +37,16 @@ class StartScene extends Phaser.Scene {
         this.load.image('biscoff_sign', 'assets/biscoff_sign.png');
         this.load.image('thisWaySign', 'assets/thisWaySign.png');
         this.load.spritesheet('cat', 'assets/animals/cat.png', { frameWidth: 250, frameHeight: 125 });
+        this.load.spritesheet('dog', 'assets/animals/dog.png', { frameWidth: 250, frameHeight: 175 });
         this.load.spritesheet('red_panda', 'assets/animals/red_panda.png', { frameWidth: 80, frameHeight: 86 });
         this.load.spritesheet('seal', 'assets/animals/seal.png', { frameWidth: 160, frameHeight: 160 });
         this.load.spritesheet('penguin', 'assets/animals/penguin.png', { frameWidth: 160, frameHeight: 160 });
+        this.load.spritesheet('polar_bear', 'assets/animals/polar_sprite.png', { frameWidth: 160, frameHeight: 450 });
+        this.load.image('orange_cat', 'assets/animals/orangeCat.png');
+        this.load.image('home', 'assets/animals/home.png');
+        this.load.image('valentineSign', 'assets/valentineSign.png');
+        this.load.audio('music_forest', 'music/1-17. Viridian Forest.mp3');
+        this.load.audio('music_center', 'music/1-21. Pokémon Center.mp3');
     }
 
     create() {
@@ -140,8 +147,10 @@ let platformsGroup;
 let leapBarsGroup;
 let lockedBarsGroup;
 let keyLockGroup;
+let noAccessGroup;
 let enemies;
 let cat;
+let dog;
 let bullets;
 let burritoCount = 0;
 let burritoText;
@@ -284,7 +293,7 @@ function createGame() {
     this.keyCollider = keyCollider;
 
     // ── Player (Judy) ────────────────────────────────────────
-    player = this.physics.add.sprite(MAP_WIDTH - 320, 368, 'judy');  // Spawn at end of map, ground level
+    player = this.physics.add.sprite(370, 368, 'judy');  // Spawn at start of map, ground level
     // Scale the sprite
     player.setScale(0.30);  // Scale down from 500x500
     // Judy is centered in frame with feet around y=380 in the 500x500 frame
@@ -296,6 +305,7 @@ function createGame() {
     player.body.setOffset(220, 220);  // Centered horizontally, reduced space above head
     player.setBounce(0.1);
     player.setCollideWorldBounds(true);
+    player.setDepth(20);  // Render in front of tiles, animals, and other world objects
 
     // ── Collisions ────────────────────────────────────────────
     this.physics.add.collider(player, groundGroup);
@@ -384,6 +394,39 @@ function createGame() {
             this.nickObjects.push({ sprite: nickSprite, collider: nickCollider, textBubble: nickTextBubble });
         });
     }
+
+    // ── noAccess object layer: block until 5 burritos, plus home and valentineSign ─────────
+    noAccessGroup = this.physics.add.staticGroup();
+    this.noAccessColliders = [];
+    const noAccessLayer = map.getObjectLayer('noAccess');
+    if (noAccessLayer && noAccessLayer.objects) {
+        noAccessLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            const isBlock = obj.name === 'noAccess' && !obj.gid;
+            const isHome = obj.gid === 2783;
+            const isValentineSign = obj.gid === 2784 || obj.name === 'valentineSign';
+            if (isBlock) {
+                // Rectangle object: x,y is top-left
+                const xPos = obj.x + obj.width / 2;
+                const yPos = obj.y + obj.height / 2;
+                const collider = this.add.rectangle(xPos, yPos, obj.width, obj.height, 0x000000, 0);
+                this.physics.add.existing(collider, true);
+                noAccessGroup.add(collider);
+                this.noAccessColliders.push(collider);
+            } else if (isHome) {
+                const xPos = obj.x + obj.width / 2;
+                const yPos = obj.y - obj.height / 2;
+                const sprite = this.add.image(xPos, yPos, 'home');
+                sprite.setDisplaySize(obj.width, obj.height);
+            } else if (isValentineSign) {
+                const xPos = obj.x + obj.width / 2;
+                const yPos = obj.y - obj.height / 2;
+                const sprite = this.add.image(xPos, yPos, 'valentineSign');
+                sprite.setDisplaySize(obj.width, obj.height);
+            }
+        });
+    }
+    this.physics.add.collider(player, noAccessGroup);
 
     // ── Safe from object layer (with password protection) ───────────────────────────────────
     const safeLayer = map.getObjectLayer('Safe');
@@ -543,6 +586,14 @@ function createGame() {
         repeat: -1
     });
 
+    // Dog walk animation (8 frames: 2 rows x 4 columns, walks right in sheet – flip for left)
+    this.anims.create({
+        key: 'dog_walk',
+        frames: this.anims.generateFrameNumbers('dog', { start: 0, end: 7 }),
+        frameRate: 8,
+        repeat: -1
+    });
+
     // Nick walk left (24 frames: 4 rows x 6 columns) – flip for right
     this.anims.create({
         key: 'nick_walk_left',
@@ -572,6 +623,14 @@ function createGame() {
         key: 'penguin_stand',
         frames: this.anims.generateFrameNumbers('penguin', { start: 0, end: 7 }),
         frameRate: 1,
+        repeat: -1
+    });
+
+    // Polar bear standing (5 frames in 1 row: 800×450)
+    this.anims.create({
+        key: 'polar_bear_stand',
+        frames: this.anims.generateFrameNumbers('polar_bear', { start: 0, end: 4 }),
+        frameRate: 0.8,
         repeat: -1
     });
 
@@ -621,6 +680,24 @@ function createGame() {
     cat.play('cat_walk');
     this.physics.add.collider(cat, groundGroup);
 
+    // ── Dog (walks left-right like cat) ─────────────────────────────────────────────────
+    const dogSpawnX = MAP_WIDTH - 70;
+    const dogSpawnY = 368;
+    const dogPatrolRange = 50;
+    dog = this.physics.add.sprite(dogSpawnX, dogSpawnY, 'dog');
+    dog.setScale(0.2);
+    dog.setBounce(0);
+    dog.body.setAllowGravity(false);
+    dog.refreshBody();
+    dog.patrolData = {
+        spawnX: dogSpawnX,
+        range: dogPatrolRange,
+        speed: 40,
+        direction: 1   // 1 = right (dog sheet faces right)
+    };
+    dog.play('dog_walk');
+    this.physics.add.collider(dog, groundGroup);
+
     // ── Red panda towards end of map (standing animation only) ─────────────────────────
     const redPandaX = MAP_WIDTH - 200;
     const redPandaY = 364;
@@ -651,6 +728,27 @@ function createGame() {
     penguinSprite.play('penguin_stand');
     this.physics.add.collider(penguinSprite, groundGroup);
 
+    // ── Polar bear towards end of map (standing, 5 poses in 1 row) ─────────────────────
+    const polarBearX = MAP_WIDTH - 270;
+    const polarBearY = 432;
+    const polarBearSprite = this.physics.add.sprite(polarBearX, polarBearY, 'polar_bear');
+    polarBearSprite.setScale(0.35);
+    polarBearSprite.setOrigin(0.5, 1);  // Anchor at feet so tall sprite sits on ground
+    polarBearSprite.body.setAllowGravity(false);
+    polarBearSprite.refreshBody();
+    polarBearSprite.play('polar_bear_stand');
+    this.physics.add.collider(polarBearSprite, groundGroup);
+
+    // ── Orange cat towards end of map (static image, no animation) ─────────────────────
+    const orangeCatX = MAP_WIDTH - 420;
+    const orangeCatY = 390;
+    const orangeCatSprite = this.physics.add.sprite(orangeCatX, orangeCatY, 'orange_cat');
+    orangeCatSprite.setScale(0.4);
+    orangeCatSprite.setOrigin(0.5, 1);
+    orangeCatSprite.body.setAllowGravity(false);
+    orangeCatSprite.refreshBody();
+    this.physics.add.collider(orangeCatSprite, groundGroup);
+
     // ── Create Bullets Group ──────────────────────────────────────
     bullets = this.physics.add.group({
         defaultKey: 'bullet',
@@ -662,6 +760,10 @@ function createGame() {
 
     // ── Player stomps on enemy ──────────────────────────────────────
     this.physics.add.overlap(player, enemies, playerEnemyCollision, null, this);
+
+    // ── Background music (Viridian Forest until all 5 burritos, then Pokémon Center) ─
+    this.forestMusic = this.sound.add('music_forest', { loop: true });
+    this.forestMusic.play();
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -708,7 +810,7 @@ function collectBurrito(player, burritoZone) {
     burritoText.setText('Burritos: ' + burritoCount + '/5');
     
     // When all 5 burritos collected, replace caged Nick with animated Nick
-    if (burritoCount >= 0) {
+    if (burritoCount >= 5) {
         const scene = player.scene;
         if (scene.nickObjects && scene.nickObjects.length > 0) {
             scene.nickObjects.forEach(nickObj => {
@@ -725,6 +827,7 @@ function collectBurrito(player, burritoZone) {
                 freedNick.setOrigin(0.5, 1);
                 freedNick.setCollideWorldBounds(true);
                 freedNick.setBounce(0.1);
+                freedNick.setDepth(19);  // In front of world objects, just behind Judy (20)
                 scene.physics.add.collider(freedNick, groundGroup);
                 scene.physics.add.collider(freedNick, platformsGroup);
                 scene.physics.add.collider(freedNick, leapBarsGroup);
@@ -734,6 +837,14 @@ function collectBurrito(player, burritoZone) {
             });
             scene.nickObjects = [];
         }
+        // Remove noAccess block so Judy can pass
+        if (scene.noAccessColliders && scene.noAccessColliders.length > 0) {
+            scene.noAccessColliders.forEach(c => c.destroy());
+            scene.noAccessColliders = [];
+        }
+        // Switch to Pokémon Center music (loop)
+        if (scene.forestMusic) scene.forestMusic.stop();
+        scene.sound.add('music_center', { loop: true }).play();
     }
 }
 
@@ -874,8 +985,8 @@ function hitPlayer(player, bullet) {
         }
     });
 
-    // Respawn player at starting position
-    player.setPosition(MAP_WIDTH - 320, 368);
+    // Respawn player at start of map
+    player.setPosition(370, 368);
     player.setVelocity(0, 0);
 }
 
@@ -883,8 +994,8 @@ function hitPlayer(player, bullet) {
 // Biscoff Collision (sends Judy back to start)
 // ───────────────────────────────────────────────────────────────
 function hitBiscoff(player, biscoffZone) {
-    // Respawn player at starting position (same as getting hit by bullet)
-    player.setPosition(MAP_WIDTH - 320, 368);
+    // Respawn player at start of map (same as getting hit by bullet)
+    player.setPosition(370, 368);
     player.setVelocity(0, 0);
 }
 
@@ -956,6 +1067,11 @@ function updateGame() {
     // Update cat patrol
     if (cat && cat.active) {
         updateCatPatrol(cat);
+    }
+
+    // Update dog patrol
+    if (dog && dog.active) {
+        updateDogPatrol(dog);
     }
 
     // Update bullets (cleanup off-screen bullets)
@@ -1115,6 +1231,27 @@ function updateCatPatrol(catSprite) {
     } else if (catSprite.x <= minX && data.direction === -1) {
         data.direction = 1;
         catSprite.setFlipX(false);
+    }
+}
+
+// ───────────────────────────────────────────────────────────────
+// Dog Patrol (walk left-right, same as cat; sheet faces right – flip for left)
+// ───────────────────────────────────────────────────────────────
+function updateDogPatrol(dogSprite) {
+    const data = dogSprite.patrolData;
+    if (!data) return;
+
+    const minX = data.spawnX - data.range;
+    const maxX = data.spawnX + data.range;
+
+    dogSprite.setVelocityX(data.speed * data.direction);
+
+    if (dogSprite.x >= maxX && data.direction === 1) {
+        data.direction = -1;
+        dogSprite.setFlipX(true);
+    } else if (dogSprite.x <= minX && data.direction === -1) {
+        data.direction = 1;
+        dogSprite.setFlipX(false);
     }
 }
 

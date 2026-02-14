@@ -9,6 +9,9 @@
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "": {
+            "scaleInDock": 0.7267
+        },
         "assets/images.tsx": {
             "dynamicWrapping": true,
             "scaleInEditor": 0.234
@@ -35,19 +38,16 @@
             "scaleInDock": 1.2304
         },
         "assets/tileMapGame.tmj": {
-            "expandedObjectLayers": [
-                25
-            ],
-            "scale": 0.7,
-            "selectedLayer": 9,
+            "scale": 0.7329,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 1600.7142857142858,
-                "y": 374.2857142857143
+                "x": 3538.6819484240687,
+                "y": 439.3505253104107
             }
         },
         "assets/tileMapGame.tmj#tileset": {
             "dynamicWrapping": false,
-            "scaleInDock": 1,
+            "scaleInDock": 0.7267,
             "scaleInEditor": 1
         },
         "nick_wilde_cage_fixed.tsx": {
