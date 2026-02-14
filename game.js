@@ -32,6 +32,9 @@ class StartScene extends Phaser.Scene {
         this.load.image('nick', 'assets/nick_wilde_cage_fixed.png');
         this.load.image('safe', 'assets/safe.png');
         this.load.image('car', 'assets/car.png');
+        this.load.image('biscoff', 'assets/biscoff.png');
+        this.load.image('biscoff_sign', 'assets/biscoff_sign.png');
+        this.load.image('thisWaySign', 'assets/thisWaySign.png');
     }
 
     create() {
@@ -438,6 +441,44 @@ function createGame() {
         });
     }
     
+    // ── Biscoff from object layer (collision sends Judy back to start) ───────────────────
+    // GID 2780 = biscoff (collision), GID 2781 = biscoff_sign (no collision), GID 2782 = thisWaySign (no collision)
+    const biscoffLayer = map.getObjectLayer('Biscoff');
+    if (biscoffLayer && biscoffLayer.objects) {
+        biscoffLayer.objects.forEach(obj => {
+            if (!obj.visible) return;
+            const xPos = obj.x + obj.width / 2;
+            const yPos = obj.y - obj.height / 2;
+            
+            // Determine image key based on GID
+            let imageKey = null;
+            let hasCollision = false;
+            
+            if (obj.gid === 2780) {
+                imageKey = 'biscoff';
+                hasCollision = true;
+            } else if (obj.gid === 2781) {
+                imageKey = 'biscoff_sign';
+            } else if (obj.gid === 2782) {
+                imageKey = 'thisWaySign';
+            }
+            
+            // Create sprite if we have an image key
+            if (imageKey) {
+                const sprite = this.add.image(xPos, yPos, imageKey);
+                sprite.setDisplaySize(obj.width, obj.height);
+            }
+            
+            // Add collision only for biscoff
+            if (hasCollision) {
+                const biscoffZone = this.add.rectangle(xPos, yPos, obj.width, obj.height, 0x000000, 0);
+                this.physics.add.existing(biscoffZone, true);
+                // When Judy touches Biscoff, send her back to start
+                this.physics.add.overlap(player, biscoffZone, hitBiscoff, null, this);
+            }
+        });
+    }
+    
     // Track if ground enemies have been defeated
     this.groundEnemiesDefeated = false;
 
@@ -723,7 +764,16 @@ function hitPlayer(player, bullet) {
     });
 
     // Respawn player at starting position
-    player.setPosition(350, MAP_HEIGHT - 100);
+    player.setPosition(350, MAP_HEIGHT - 200);
+    player.setVelocity(0, 0);
+}
+
+// ───────────────────────────────────────────────────────────────
+// Biscoff Collision (sends Judy back to start)
+// ───────────────────────────────────────────────────────────────
+function hitBiscoff(player, biscoffZone) {
+    // Respawn player at starting position (same as getting hit by bullet)
+    player.setPosition(350, MAP_HEIGHT - 200);
     player.setVelocity(0, 0);
 }
 
