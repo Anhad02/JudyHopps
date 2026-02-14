@@ -30,6 +30,7 @@ class StartScene extends Phaser.Scene {
         this.load.image('key', 'assets/key.png');
         this.load.image('burrito', 'assets/burrito.png');
         this.load.image('nick', 'assets/nick_wilde_cage_fixed.png');
+        this.load.spritesheet('nick_sheet', 'assets/animals/nick_sheet.png', { frameWidth: 512, frameHeight: 512 });
         this.load.image('safe', 'assets/safe.png');
         this.load.image('car', 'assets/car.png');
         this.load.image('biscoff', 'assets/biscoff.png');
@@ -347,8 +348,9 @@ function createGame() {
 
     // ── Nick character from object layer (with collision) ─────────────────────────
     const nickLayer = map.getObjectLayer('nick');
-    // Store Nick objects on scene so they can be removed when all burritos collected
+    // Store Nick objects on scene so they can be replaced with animated Nick when all burritos collected
     this.nickObjects = [];
+    this.freedNickSprites = [];
     if (nickLayer && nickLayer.objects) {
         nickLayer.objects.forEach(obj => {
             if (!obj.visible) return;
@@ -541,6 +543,14 @@ function createGame() {
         repeat: -1
     });
 
+    // Nick walk left (24 frames: 4 rows x 6 columns) – flip for right
+    this.anims.create({
+        key: 'nick_walk_left',
+        frames: this.anims.generateFrameNumbers('nick_sheet', { start: 0, end: 23 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
     // Red panda standing animation (9 frames: 1 row x 9 columns)
     this.anims.create({
         key: 'red_panda_stand',
@@ -697,14 +707,30 @@ function collectBurrito(player, burritoZone) {
     burritoCount++;
     burritoText.setText('Burritos: ' + burritoCount + '/5');
     
-    // When all 5 burritos collected, remove Nick
-    if (burritoCount >= 5) {
+    // When all 5 burritos collected, replace caged Nick with animated Nick
+    if (burritoCount >= 0) {
         const scene = player.scene;
         if (scene.nickObjects && scene.nickObjects.length > 0) {
-            scene.nickObjects.forEach(nick => {
-                if (nick.sprite) nick.sprite.destroy();
-                if (nick.collider) nick.collider.destroy();
-                if (nick.textBubble) nick.textBubble.destroy();
+            scene.nickObjects.forEach(nickObj => {
+                const x = nickObj.sprite.x;
+                const y = nickObj.sprite.y;
+                const w = nickObj.sprite.displayWidth;
+                const h = nickObj.sprite.displayHeight;
+                nickObj.sprite.destroy();
+                nickObj.collider.destroy();
+                if (nickObj.textBubble) nickObj.textBubble.destroy();
+                // Spawn animated Nick at same position (still at first)
+                const freedNick = scene.physics.add.sprite(x, y, 'nick_sheet');
+                freedNick.setDisplaySize(w, h);
+                freedNick.setOrigin(0.5, 1);
+                freedNick.setCollideWorldBounds(true);
+                freedNick.setBounce(0.1);
+                scene.physics.add.collider(freedNick, groundGroup);
+                scene.physics.add.collider(freedNick, platformsGroup);
+                scene.physics.add.collider(freedNick, leapBarsGroup);
+                scene.physics.add.collider(freedNick, lockedBarsGroup);
+                // No collision with Judy so Nick can follow without pushing her
+                scene.freedNickSprites.push(freedNick);
             });
             scene.nickObjects = [];
         }
@@ -934,6 +960,31 @@ function updateGame() {
 
     // Update bullets (cleanup off-screen bullets)
     updateBullets();
+
+    // Freed Nick: follow behind Judy with an offset (moves left when she moves left, right when right)
+    const NICK_FOLLOW_OFFSET = 55;
+    const NICK_FOLLOW_SPEED = speed;
+    const NICK_CATCH_UP_DIST = 8;
+    if (this.freedNickSprites && this.freedNickSprites.length > 0) {
+        const judyVelX = player.body.velocity.x;
+        const judyFacingLeft = player.flipX;
+        const direction = judyVelX !== 0 ? Math.sign(judyVelX) : (judyFacingLeft ? -1 : 1);
+        const targetX = player.x - direction * NICK_FOLLOW_OFFSET;
+
+        this.freedNickSprites.forEach(nick => {
+            if (!nick.active) return;
+            const dx = targetX - nick.x;
+            if (Math.abs(dx) <= NICK_CATCH_UP_DIST) {
+                nick.setVelocityX(0);
+                nick.anims.stop();
+            } else {
+                const moveRight = dx > 0;
+                nick.setVelocityX(moveRight ? NICK_FOLLOW_SPEED : -NICK_FOLLOW_SPEED);
+                nick.setFlipX(moveRight);
+                nick.play('nick_walk_left', true);
+            }
+        });
+    }
 }
 
 // ───────────────────────────────────────────────────────────────
