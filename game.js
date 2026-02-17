@@ -851,8 +851,8 @@ function collectBurrito(player, burritoZone) {
 // ───────────────────────────────────────────────────────────────
 // Safe Password Dialog
 // ───────────────────────────────────────────────────────────────
-const SAFE_PASSWORD = 'Pab2310$';  // The correct password
-const SAFE_HINT = 'Hint: Only a Sabharwal can open this safe';
+const SAFE_PASSWORD = '4146';  // The correct password
+const SAFE_HINT = 'Hint: What\'s 1836 + 2310?';
 
 function openSafeDialog(player, safeTrigger) {
     const scene = player.scene;
